@@ -9,7 +9,7 @@ Services used:
 3) DynamoDB: Stores movie information such as movie title, genre, year of release
 4) Terraform: Provision S3 bucket, DynamoDB and Lambda
 
-Blog post: 
+Blog post: https://pohwj.hashnode.dev/serverless-movie-api
 
 References:
 
