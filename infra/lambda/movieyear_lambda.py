@@ -7,7 +7,7 @@ table = dynamodb.Table('movies_tf')
 
 def lambda_handler(event, context):
 
-    year = event.get('queryStringParameters', {}).get('year')
+    year = event["queryStringParameters"]["year"]
     
     if not year:
         return {
