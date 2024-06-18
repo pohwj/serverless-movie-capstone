@@ -36,7 +36,7 @@ data "aws_iam_policy_document" "allow_objects_public_access" {
 
     principals {
       type        = "AWS"
-      identifiers = ["284807706316"]
+      identifiers = [var.account_id]
     }
   }
 
