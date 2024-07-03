@@ -1,4 +1,4 @@
-### S3 Bucket Settings ###
+# S3 Bucket Settings
 
 resource "aws_s3_bucket" "movies_bucket_tf" {
 
@@ -56,25 +56,22 @@ data "aws_iam_policy_document" "allow_objects_public_access" {
   }
 }
 
-resource "aws_s3_object" "oppenheimer_object" {
-  bucket = aws_s3_bucket.movies_bucket_tf.id
-  key    = "oppenheimer.jpg"
-  source = "${path.module}/oppenheimer.jpg"
+locals {
+  s3_objects ={
+    oppenheimer = "oppenheimer.jpg",
+    darkknight = "thedarkknight.jpg",
+    wallstreet = "wolfofwallstreet.jpg"
+  }
 }
 
-resource "aws_s3_object" "darkknight_object" {
-  bucket = aws_s3_bucket.movies_bucket_tf.id
-  key    = "thedarkknight.jpg"
-  source = "${path.module}/thedarkknight.jpg"
+resource "aws_s3_object" "movie_objects" {
+  for_each = local.s3_objects
+  bucket   = aws_s3_bucket.movies_bucket_tf.id
+  key      = each.value
+  source   = "${path.module}/${each.value}"
 }
 
-resource "aws_s3_object" "wallstreet_object" {
-  bucket = aws_s3_bucket.movies_bucket_tf.id
-  key    = "wolfofwallstreet.jpg"
-  source = "${path.module}/wolfofwallstreet.jpg"
-}
-
-### DynamoDB Table Settings ###
+# DynamoDB Table Settings
 
 resource "aws_dynamodb_table" "movies_table" {
   billing_mode = "PAY_PER_REQUEST"
@@ -142,7 +139,7 @@ resource "aws_dynamodb_table_item" "movies_item3" {
 ITEM
 }
 
-### Lambda Function Settings ###
+# Lambda Function Settings
 
 resource "aws_lambda_function" "movies_lambda" {
   filename         = data.archive_file.zip_the_python_code.output_path
