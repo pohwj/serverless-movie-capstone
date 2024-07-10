@@ -56,16 +56,12 @@ data "aws_iam_policy_document" "allow_objects_public_access" {
   }
 }
 
-locals {
-  s3_objects ={
+resource "aws_s3_object" "movie_objects" {
+  for_each = {
     oppenheimer = "oppenheimer.jpg",
     darkknight = "thedarkknight.jpg",
     wallstreet = "wolfofwallstreet.jpg"
   }
-}
-
-resource "aws_s3_object" "movie_objects" {
-  for_each = local.s3_objects
   bucket   = aws_s3_bucket.movies_bucket_tf.id
   key      = each.value
   source   = "${path.module}/${each.value}"
