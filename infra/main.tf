@@ -30,7 +30,7 @@ data "aws_iam_policy_document" "allow_objects_public_access" {
     ]
 
     resources = [
-        aws_s3_bucket.movies_bucket_tf.arn,
+      aws_s3_bucket.movies_bucket_tf.arn,
       "${aws_s3_bucket.movies_bucket_tf.arn}/*"
     ]
 
@@ -59,12 +59,12 @@ data "aws_iam_policy_document" "allow_objects_public_access" {
 resource "aws_s3_object" "movie_objects" {
   for_each = {
     oppenheimer = "oppenheimer.jpg",
-    darkknight = "thedarkknight.jpg",
-    wallstreet = "wolfofwallstreet.jpg"
+    darkknight  = "thedarkknight.jpg",
+    wallstreet  = "wolfofwallstreet.jpg"
   }
-  bucket   = aws_s3_bucket.movies_bucket_tf.id
-  key      = each.value
-  source   = "${path.module}/${each.value}"
+  bucket = aws_s3_bucket.movies_bucket_tf.id
+  key    = each.value
+  source = "${path.module}/${each.value}"
 }
 
 # DynamoDB Table Settings
@@ -73,7 +73,7 @@ resource "aws_dynamodb_table" "movies_table" {
   billing_mode = "PAY_PER_REQUEST"
   hash_key     = "title"
   name         = "movies_tf"
-  
+
   attribute {
     name = "title"
     type = "S"
@@ -85,9 +85,9 @@ resource "aws_dynamodb_table" "movies_table" {
   }
 
   global_secondary_index {
-    name               = "ReleaseYearIndex"
-    hash_key           = "releaseYear"
-    projection_type    = "ALL"
+    name            = "ReleaseYearIndex"
+    hash_key        = "releaseYear"
+    projection_type = "ALL"
   }
 }
 
@@ -137,30 +137,44 @@ ITEM
 
 # Lambda Function Settings
 
-resource "aws_lambda_function" "movies_lambda" {
-  filename         = data.archive_file.zip_the_python_code.output_path
-  function_name    = "movies_lambda"
-  role             = aws_iam_role.movies_lambda_role.arn
-  handler          = "movies_lambda.lambda_handler"
-  source_code_hash = data.archive_file.zip_the_python_code.output_base64sha256
-  runtime = "python3.9"
-}
+# resource "aws_lambda_function" "movies_lambda" {
+#   filename         = data.archive_file.zip_the_python_code.output_path
+#   function_name    = "movies_lambda"
+#   role             = aws_iam_role.movies_lambda_role.arn
+#   handler          = "movies_lambda.lambda_handler"
+#   source_code_hash = data.archive_file.zip_the_python_code.output_base64sha256
+#   runtime = "python3.9"
+# }
 
-resource "aws_lambda_function" "movieyear_lambda" {
-  filename         = data.archive_file.zip_the_python_code_2.output_path
-  function_name    = "movieyear_lambda"
+# resource "aws_lambda_function" "movieyear_lambda" {
+#   filename         = data.archive_file.zip_the_python_code_2.output_path
+#   function_name    = "movieyear_lambda"
+#   role             = aws_iam_role.movies_lambda_role.arn
+#   handler          = "movieyear_lambda.lambda_handler"
+#   source_code_hash = data.archive_file.zip_the_python_code_2.output_base64sha256
+#   runtime = "python3.9"
+# }
+
+resource "aws_lambda_function" "lambda_functions" {
+  for_each = {
+    "movies_lambda" = "movies_lambda",
+    "movieyear_lambda" = "movieyear_lambda"
+  }
+
+  filename         = data.archive_file.zip_python_code[each.key].output_path
+  function_name    = each.value
   role             = aws_iam_role.movies_lambda_role.arn
-  handler          = "movieyear_lambda.lambda_handler"
-  source_code_hash = data.archive_file.zip_the_python_code_2.output_base64sha256
-  runtime = "python3.9"
+  handler          = "${each.value}.lambda_handler"
+  source_code_hash = data.archive_file.zip_python_code[each.key].output_base64sha256
+  runtime          = "python3.9"
 }
 
 resource "aws_iam_role" "movies_lambda_role" {
   name = "movies_lambda_role"
 
   assume_role_policy = jsonencode({
-  Version = "2012-10-17"
-  Statement = [
+    Version = "2012-10-17"
+    Statement = [
       {
         Action = "sts:AssumeRole"
         Effect = "Allow"
@@ -197,7 +211,7 @@ resource "aws_iam_policy" "iam_policy_for_movies_lambda" {
           Action : [
             "dynamodb:Scan",
             "dynamodb:Query"
-            
+
           ]
           Resource = [aws_dynamodb_table.movies_table.arn, "${aws_dynamodb_table.movies_table.arn}/index/ReleaseYearIndex"]
         },
@@ -206,28 +220,46 @@ resource "aws_iam_policy" "iam_policy_for_movies_lambda" {
 }
 
 resource "aws_iam_role_policy_attachment" "attach_iam_policy_to_iam_role" {
-    role       = aws_iam_role.movies_lambda_role.name
-    policy_arn = aws_iam_policy.iam_policy_for_movies_lambda.arn
+  role       = aws_iam_role.movies_lambda_role.name
+  policy_arn = aws_iam_policy.iam_policy_for_movies_lambda.arn
 }
 
-data "archive_file" "zip_the_python_code" {
+# data "archive_file" "zip_the_python_code" {
+#   type        = "zip"
+#   source_file = "${path.module}/lambda/movies_lambda.py"
+#   output_path = "${path.module}/lambda/movies_lambda.zip"
+# }
+
+# data "archive_file" "zip_the_python_code_2" {
+#   type        = "zip"
+#   source_file = "${path.module}/lambda/movieyear_lambda.py"
+#   output_path = "${path.module}/lambda/movieyear_lambda.zip"
+# }
+
+data "archive_file" "zip_python_code" {
+  for_each = {
+    "movies_lambda"    = "movies_lambda.py",
+    "movieyear_lambda" = "movieyear_lambda.py"
+  }
+
   type        = "zip"
-  source_file = "${path.module}/lambda/movies_lambda.py"
-  output_path = "${path.module}/lambda/movies_lambda.zip"
+  source_file = "${path.module}/lambda/${each.value}"
+  output_path = "${path.module}/lambda/${each.key}"
+
 }
 
-data "archive_file" "zip_the_python_code_2" {
-  type        = "zip"
-  source_file = "${path.module}/lambda/movieyear_lambda.py"
-  output_path = "${path.module}/lambda/movieyear_lambda.zip"
-}
+# resource "aws_lambda_function_url" "movies_lambda_url" {
+#   function_name      = aws_lambda_function.movies_lambda.function_name
+#   authorization_type = "NONE"
+# }
 
-resource "aws_lambda_function_url" "movies_lambda_url" {
-  function_name      = aws_lambda_function.movies_lambda.function_name
-  authorization_type = "NONE"
-}
+# resource "aws_lambda_function_url" "movieyear_lambda_url" {
+#   function_name      = aws_lambda_function.movieyear_lambda.function_name
+#   authorization_type = "NONE"
+# }
 
-resource "aws_lambda_function_url" "movieyear_lambda_url" {
-  function_name      = aws_lambda_function.movieyear_lambda.function_name
+resource "aws_lambda_function_url" "lambda_function_urls" {
+  for_each           = aws_lambda_function.lambda_functions
+  function_name      = each.value.function_name
   authorization_type = "NONE"
 }
