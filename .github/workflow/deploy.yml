@@ -1,13 +1,14 @@
 name: Terraform to deploy resources on AWS
 
 on:
-  pull_request_review:
-    types: [submitted]
+  push:
+    path-ignore:
+      - 'README.md'
 
 jobs:
   terraform:
     runs-on: ubuntu-latest
-    if: github.event.review.state == 'approved'
+    
     defaults:
       run:
         working-directory: ./infra
